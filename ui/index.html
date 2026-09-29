@@ -192,11 +192,60 @@ function el(tag, attrs = {}, ...kids) {
   for (const k of kids.flat()) if (k != null) e.append(k.nodeType ? k : document.createTextNode(k));
   return e;
 }
+/* ---------- the engine: a local server, or SWI-Prolog running in this browser ---------- */
+/* On your own computer (swipl -g ui_start aerorule_ui.pl) the page talks to the server.
+   On GitHub Pages there is no server, so the same Prolog files run here through WebAssembly. */
+const engine = { mode: null, loading: false, swipl: null, ready: null };
+
+function loadScript(src) {
+  return new Promise((ok, fail) => {
+    const s = document.createElement("script");
+    s.src = src; s.onload = ok; s.onerror = () => fail(new Error("Could not load " + src));
+    document.head.append(s);
+  });
+}
+async function fetchText(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("Could not load " + url + " (" + r.status + ")");
+  return r.text();
+}
+async function startWasm() {
+  engine.loading = true;
+  try {
+    await loadScript("wasm/swipl-web.js");
+    const swipl = await SWIPL({ arguments: ["-q"], print() {}, printErr() {}, locateFile: f => "wasm/" + f });
+    for (const f of ["aerorule.pl", "aerorule_api.pl"]) swipl.FS.writeFile("/" + f, await fetchText("../" + f));
+    const r = swipl.prolog.query("consult('/aerorule_api.pl')").once();
+    if (!r || !r.success) throw new Error("The Prolog engine could not load the rules.");
+    engine.swipl = swipl; engine.mode = "wasm";
+  } finally { engine.loading = false; }
+}
+async function startEngine() {
+  try {
+    const r = await fetch("api/rules");
+    if (r.ok && (r.headers.get("content-type") || "").includes("json")) { engine.mode = "server"; return; }
+  } catch (e) { /* no server here */ }
+  if (location.protocol === "file:") throw new Error("Please open this page through a web server (see the README), not as a file.");
+  await startWasm();
+}
+function engineReady() { return engine.ready || (engine.ready = startEngine().then(showEngineNote)); }
+function showEngineNote() {
+  const f = $("footer");
+  f.append(engine.mode === "wasm" ? " · Running in your browser (SWI-Prolog compiled to WebAssembly)." : " · Running on the AeroRule server on this computer.");
+}
+function wasmCall(kind, body) {
+  const r = engine.swipl.prolog.query("ui_handle_json(K, In, Out)", { K: kind, In: JSON.stringify(body || {}) }).once();
+  if (!r || r.error || !r.success) throw new Error("The engine failed on this request.");
+  return JSON.parse(String(r.Out));
+}
 async function api(path, body) {
+  await engineReady();
+  if (engine.mode === "wasm") return wasmCall(path.split("/").pop(), body);
   const res = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
   if (!res.ok) throw new Error("The server answered " + res.status);
   return res.json();
 }
+const busyText = () => engine.mode === null ? "Starting the engine… (the first visit downloads about 4 MB)" : "Thinking…";
 const PHASES = [["base", "Conditions"], ["svfr", "Special VFR"], ["ifr", "IFR destination"], ["alt", "Alternate"], ["fuel", "Fuel"]];
 const PLANE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.6 7.4L22 12.6v1.8l-8.4-1.3L13 18l2.4 1.7V22L12 21l-3.4 1v-2.3L11 18l-.6-4.9L2 14.4v-1.8l8.4-3.2z"/></svg>';
 const STOP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 7l10 10"/></svg>';
@@ -256,8 +305,8 @@ function makeWizard(root, mode) {
     st.busy = true; render();
     try {
       const body = { answers: st.answers.map(a => ({ name: a.name, value: a.value })) };
-      let path = "/api/forward";
-      if (mode === "bwd") { path = "/api/backward"; body.goal = st.goal; }
+      let path = "api/forward";
+      if (mode === "bwd") { path = "api/backward"; body.goal = st.goal; }
       const r = await api(path, body);
       if (r.status === "error") { st.error = r.message; st.answers = st.answers.filter(a => a.name !== r.name); st.presetRun = null; st.busy = false; return ask(); }
       if (r.status === "question") {
@@ -270,7 +319,7 @@ function makeWizard(root, mode) {
         }
         st.presetRun = null;
       } else { st.result = r; st.q = null; st.presetRun = null; }
-    } catch (e) { st.error = e.message + ". Is the server still running?"; st.presetRun = null; }
+    } catch (e) { st.error = e.message + (engine.mode === "server" ? ". Is the server still running?" : ""); st.presetRun = null; }
     st.busy = false; render();
   }
   function answer(value) {
@@ -401,7 +450,7 @@ function makeWizard(root, mode) {
     root.replaceChildren();
     if (mode === "bwd" && !st.goal) { root.append(el("div", { class: "grid" }, goalPicker(), sidePanelPresetsOnly())); return; }
     let main;
-    if (st.busy && !st.q && !st.result) main = el("div", { class: "card" }, el("span", { class: "spin" }), "Thinking…");
+    if (st.busy && !st.q && !st.result) main = el("div", { class: "card" }, el("span", { class: "spin" }), busyText());
     else if (st.result) main = resultCard();
     else if (st.q) main = questionCard();
     else main = el("div", { class: "card" }, el("span", { class: "spin" }), "Loading…");
@@ -423,7 +472,7 @@ async function renderRules() {
   const root = $("#tab-rules");
   root.append(el("div", { class: "card" }, el("span", { class: "spin" }), "Loading the rules…"));
   try {
-    const data = await api("/api/rules");
+    const data = await api("api/rules");
     root.replaceChildren();
     const list = el("div", {});
     const items = data.rules.map(r => {
@@ -457,7 +506,7 @@ function renderTests() {
   const run = async () => {
     out.replaceChildren(el("span", { class: "spin" }), "Running the tests…");
     try {
-      const r = await api("/api/tests");
+      const r = await api("api/tests");
       const lines = r.lines;
       const sum = lines.find(l => /tests passed/.test(l)) || "";
       const m = sum.match(/(\d+) of (\d+)/);
