@@ -6,6 +6,10 @@
 
 Written in SWI-Prolog · 30 rules, each tied to a paragraph of 14 CFR Part 91 · forward chaining, backward chaining and full explanations · console menu **and** browser interface
 
+### 🌍 [Try it online](https://thamindunirmal.github.io/aerorule-expert-system/)
+
+<sub>Nothing to install. The Prolog engine runs inside your browser.</sub>
+
 <sub>Assignment 2 · CM3321 Logic Programming and Artificial Cognitive Systems · University of Moratuwa</sub>
 
 </div>
@@ -40,8 +44,11 @@ I picked this field because the rules already exist in writing, so nothing had t
 | File | Contents |
 |---|---|
 | [`aerorule.pl`](aerorule.pl) | The whole expert system in one file: questions, 30 rules, both inference engines, explanations, console menu and the 98 tests |
-| [`aerorule_ui.pl`](aerorule_ui.pl) | The web interface server. It loads `aerorule.pl` unchanged and calls its own predicates, so the rules exist in one place only |
-| [`ui/index.html`](ui/index.html) | The web page (one file, no libraries, works offline) |
+| [`aerorule_api.pl`](aerorule_api.pl) | The logic behind the web interface. It loads `aerorule.pl` unchanged and calls its own predicates, so the rules exist in one place only |
+| [`aerorule_ui.pl`](aerorule_ui.pl) | A small local web server around `aerorule_api.pl` |
+| [`ui/index.html`](ui/index.html) | The web page (one file, no libraries) |
+| [`ui/wasm/`](ui/wasm) | SWI-Prolog compiled to WebAssembly (about 4 MB, BSD licence included), so the page can run without a server |
+| [`index.html`](index.html) | Sends visitors of the online version to `ui/` |
 | [`RULES.md`](RULES.md) | Every rule in plain words with its source and link, the list of facts and the assumptions |
 | [`TESTS.md`](TESTS.md) | Results of the 98 automatic tests and how the system was checked |
 
@@ -49,7 +56,11 @@ I picked this field because the rules already exist in writing, so nothing had t
 
 You only need **[SWI-Prolog](https://www.swi-prolog.org/Download.html)** (stable release). No packages to install.
 
-### 🌐 Browser interface
+### 🌍 Online
+
+Open <https://thamindunirmal.github.io/aerorule-expert-system/>. It is the same page as below. With no server behind it, the page downloads SWI-Prolog as WebAssembly (about 4 MB, first visit only), loads the unchanged erorule.pl and runs everything on your own device. Nothing you type is sent anywhere.
+
+### 🌐 Browser interface on your computer
 
 ```bash
 swipl -g ui_start aerorule_ui.pl
@@ -141,13 +152,16 @@ Answer `no` to the ATC clearance question instead and the result is ⛔ **NOT LE
 
 ```mermaid
 flowchart LR
-    B["Browser page<br/>ui/index.html"] -- "answers so far (JSON)" --> S["aerorule_ui.pl<br/>HTTP server"]
-    S -- "next question, or the result" --> B
-    S -- "calls input/6, forward_chain, bc, problems" --> E["aerorule.pl<br/>30 rules + engines"]
+    B["Browser page<br/>ui/index.html"] -- "answers so far" --> A["aerorule_api.pl<br/>JSON in, JSON out"]
+    A -- "next question, or the result" --> B
+    A -- "calls input/6, forward_chain, bc, problems" --> E["aerorule.pl<br/>30 rules + engines"]
+    S["aerorule_ui.pl<br/>local server"] --> A
+    W["SWI-Prolog WebAssembly<br/>ui/wasm"] --> A
     C["Console menu<br/>main."] --> E
 ```
 
-The browser keeps the list of answers. Each request sends the whole list, the server loads it as facts, lets the engine work, and replies with the next question or the final result. Nothing is stored between requests. Answers are checked by the engine's own validation, so `y`, `3.5` and `none` mean the same as at the console.
+The page can reach `aerorule_api.pl` in two ways. On your computer it asks `aerorule_ui.pl` over HTTP. On the online version there is no server, so it runs the same Prolog files itself through WebAssembly. It tries the server first and falls back to WebAssembly.
+The browser keeps the list of answers. Each request sends the whole list, the engine loads it as facts, lets the engine work, and replies with the next question or the final result. Nothing is stored between requests. Answers are checked by the engine's own validation, so `y`, `3.5` and `none` mean the same as at the console.
 
 ## Running the tests
 
@@ -164,7 +178,7 @@ The last lines should read:
 rules triggered at least once: 30 of 30
 ```
 
-Web-interface check. It plays all 41 scenarios through the code the web page uses, once by forward and once by backward chaining, and compares each verdict with the expected one:
+Web-interface check. It plays all 41 scenarios through the code the web page uses (erorule_api.pl), once by forward and once by backward chaining, and compares each verdict with the expected one:
 
 ```bash
 swipl -q -g ui_selftest -t halt aerorule_ui.pl
@@ -175,6 +189,10 @@ The last line should read:
 ```
 41 of 41 web-interface checks passed
 ```
+
+## Publishing your own copy
+
+The repository is a plain static site as well. On GitHub: **Settings > Pages > Build and deployment > Deploy from a branch > main / (root) > Save**. A minute later the site is at https://<your-name>.github.io/<repo-name>/.
 
 ## Limits
 
