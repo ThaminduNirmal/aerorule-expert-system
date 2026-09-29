@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AeroRule</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230b5cad'/%3E%3Cpath d='M12 3l1.6 7.4L21 13v1.6l-7.4-1.2L13 19l2 1.4V22l-3-.8-3 .8v-1.6l2-1.4-.6-5.6L3 14.6V13l7.4-2.6z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f4f6f9; --panel:#ffffff; --ink:#15202b; --muted:#5d6b7a; --line:#dde3ea;
+  --accent:#0b5cad; --accent-ink:#ffffff; --accent-soft:#e6f0fb;
+  --ok:#137a3f; --ok-soft:#e3f5ea; --bad:#b3261e; --bad-soft:#fdeceb; --warn:#8a5a00; --warn-soft:#fff4dc;
+  --code:#eef2f6; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1319; --panel:#171e26; --ink:#e7edf3; --muted:#93a1b0; --line:#2a3541;
+    --accent:#5aa9f0; --accent-ink:#06121f; --accent-soft:#16283a;
+    --ok:#4cc27f; --ok-soft:#12291d; --bad:#ff8a80; --bad-soft:#331816; --warn:#f0b34a; --warn-soft:#2f2410;
+    --code:#1e2732; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1319; --panel:#171e26; --ink:#e7edf3; --muted:#93a1b0; --line:#2a3541;
+  --accent:#5aa9f0; --accent-ink:#06121f; --accent-soft:#16283a;
+  --ok:#4cc27f; --ok-soft:#12291d; --bad:#ff8a80; --bad-soft:#331816; --warn:#f0b34a; --warn-soft:#2f2410;
+  --code:#1e2732; --shadow:none;
+}
+*{box-sizing:border-box}
+html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input{font:inherit;color:inherit}
+a{color:var(--accent)}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;font-size:.9em}
+
+header{background:var(--panel);border-bottom:1px solid var(--line)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+.top{display:flex;align-items:center;gap:14px;padding:14px 0;flex-wrap:wrap}
+.logo{width:40px;height:40px;border-radius:10px;background:var(--accent);display:grid;place-items:center;flex:none}
+.logo svg{width:24px;height:24px;fill:var(--accent-ink)}
+.brand h1{margin:0;font-size:1.25rem;line-height:1.2}
+.brand p{margin:0;color:var(--muted);font-size:.875rem}
+.grow{flex:1}
+.chip{font-size:.78rem;padding:4px 10px;border-radius:999px;background:var(--warn-soft);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent)}
+.iconbtn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 10px;cursor:pointer}
+nav{display:flex;gap:4px;overflow-x:auto}
+nav button{border:0;background:none;padding:10px 14px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;font-weight:600}
+nav button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+nav button:focus-visible,.btn:focus-visible,.opt:focus-visible,input:focus-visible,.iconbtn:focus-visible,summary:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 50%,transparent);outline-offset:2px}
+
+main{padding:22px 0 60px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:20px}
+.card h2{margin:0 0 4px;font-size:1.15rem}
+.card h3{margin:18px 0 8px;font-size:1rem}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+
+.steps{display:flex;gap:6px;margin:0 0 18px;padding:0;list-style:none;flex-wrap:wrap}
+.steps li{font-size:.78rem;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.steps li.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);font-weight:600}
+.steps li.done{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+
+.note{background:var(--accent-soft);border-left:4px solid var(--accent);padding:10px 12px;border-radius:8px;margin:0 0 14px;font-size:.92rem}
+.qtext{font-size:1.2rem;font-weight:600;margin:0 0 14px}
+.opts{display:flex;flex-wrap:wrap;gap:10px}
+.opt{min-width:92px;padding:12px 18px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);cursor:pointer;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.opt:hover{border-color:var(--accent);background:var(--accent-soft)}
+.numrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input[type=number]{width:200px;padding:11px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel)}
+.btn{padding:11px 18px;border-radius:10px;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer;font-weight:600}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.plain{background:none;border-color:var(--line);color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:default}
+.hint{margin-top:8px;font-size:.85rem;color:var(--muted)}
+.err{margin-top:10px;color:var(--bad);font-size:.9rem}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;align-items:center}
+details.why{margin-top:16px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--code)}
+details.why summary{cursor:pointer;font-weight:600;font-size:.9rem}
+details.why p{margin:8px 0 4px;font-size:.9rem}
+.rulechips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.rc{font-family:ui-monospace,Consolas,monospace;font-size:.75rem;padding:1px 7px;border-radius:6px;background:var(--panel);border:1px solid var(--line)}
+
+.side h3{margin:0 0 10px;font-size:.95rem}
+.answers{list-style:none;margin:0;padding:0;font-size:.88rem}
+.answers li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.answers li:last-child{border:0}
+.answers b{font-family:ui-monospace,Consolas,monospace;font-weight:600;flex:none;white-space:nowrap;text-align:right}
+.answers span{color:var(--muted);min-width:0}
+.presets{display:grid;gap:8px;margin-top:14px}
+.presets .btn{text-align:left}
+
+.verdict{display:flex;gap:14px;align-items:center;border-radius:12px;padding:16px 18px;margin-bottom:6px}
+.verdict.legal{background:var(--ok-soft);color:var(--ok)}
+.verdict.not_legal{background:var(--bad-soft);color:var(--bad)}
+.verdict .big{font-size:1.4rem;font-weight:800;line-height:1.2}
+.verdict svg{width:38px;height:38px;flex:none}
+.verdict .sub{color:var(--ink);font-size:.9rem;opacity:.85}
+.issues{margin:0;padding:0;list-style:none}
+.issues li{padding:9px 12px;border-radius:8px;background:var(--bad-soft);margin-bottom:6px;font-size:.92rem}
+pre.detail{margin:6px 0 0;padding:10px 12px;background:var(--code);border-radius:8px;overflow:auto;font-size:.82rem;white-space:pre-wrap}
+.timeline{list-style:none;margin:0;padding:0;counter-reset:s}
+.timeline li{position:relative;padding:8px 0 8px 42px;border-left:2px solid var(--line);margin-left:14px;counter-increment:s}
+.timeline li::before{content:counter(s);position:absolute;left:-15px;top:8px;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:.78rem;font-weight:700;border:2px solid var(--panel)}
+.timeline .rid{font-family:ui-monospace,Consolas,monospace;font-weight:700;color:var(--accent)}
+.timeline .concl{font-family:ui-monospace,Consolas,monospace;font-size:.85rem;background:var(--code);padding:1px 7px;border-radius:6px;display:inline-block;margin-top:2px;word-break:break-all}
+.timeline .src{display:block;color:var(--muted);font-size:.8rem}
+
+.tree{font-size:.9rem}
+.tree ul{list-style:none;margin:0;padding-left:20px;border-left:1px dashed var(--line)}
+.tree > ul{padding-left:0;border:0}
+.tree li{margin:4px 0}
+.tree .t{font-family:ui-monospace,Consolas,monospace;font-size:.85rem;word-break:break-word}
+.tree .tag{display:inline-block;font-size:.7rem;padding:0 6px;border-radius:5px;margin-right:6px;font-weight:700;vertical-align:1px}
+.tag.rule{background:var(--accent-soft);color:var(--accent)}
+.tag.given{background:var(--warn-soft);color:var(--warn)}
+.tag.check{background:var(--ok-soft);color:var(--ok)}
+.tag.absent,.tag.ref{background:var(--code);color:var(--muted)}
+.tree .why{color:var(--muted);font-size:.8rem;display:block}
+
+.goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:14px}
+.goal{text-align:left;padding:14px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel);cursor:pointer}
+.goal:hover{border-color:var(--accent);background:var(--accent-soft)}
+.goal b{display:block;margin-bottom:2px}
+.goal span{color:var(--muted);font-size:.85rem}
+
+.search{width:100%;padding:11px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);margin:12px 0}
+.rule{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:8px}
+.rule summary{cursor:pointer;padding:12px 14px;display:flex;gap:10px;align-items:baseline;list-style:none}
+.rule summary::-webkit-details-marker{display:none}
+.rule .rid{font-family:ui-monospace,Consolas,monospace;font-weight:700;color:var(--accent);min-width:2.6em}
+.rule .body{padding:0 14px 14px}
+.rule .kw{font-weight:700;font-size:.75rem;color:var(--muted);letter-spacing:.06em}
+.rule ul{margin:4px 0 8px;padding-left:20px}
+.rule li{font-family:ui-monospace,Consolas,monospace;font-size:.83rem;margin:2px 0;word-break:break-word}
+.regs{margin:0;padding-left:20px}
+.regs li{margin:4px 0}
+
+.bar{height:12px;border-radius:99px;background:var(--bad-soft);overflow:hidden;margin:10px 0}
+.bar i{display:block;height:100%;background:var(--ok)}
+.tests{font-family:ui-monospace,Consolas,monospace;font-size:.82rem;max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.tests div{padding:3px 12px;white-space:pre-wrap;border-bottom:1px solid var(--line)}
+.tests .pass{color:var(--ok)} .tests .fail{color:var(--bad);background:var(--bad-soft)}
+.tests .head{background:var(--code);font-weight:700}
+.tests .dim{color:var(--muted)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+footer{color:var(--muted);font-size:.82rem;text-align:center;padding:10px 16px 30px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l1.6 7.4L22 12.6v1.8l-8.4-1.3L13 18l2.4 1.7V22L12 21l-3.4 1v-2.3L11 18l-.6-4.9L2 14.4v-1.8l8.4-3.2z"/></svg></div>
+      <div class="brand"><h1>AeroRule</h1><p>Flight-rule legality advisor · 14 CFR Part 91</p></div>
+      <div class="grow"></div>
+      <span class="chip">Study project. Not for real flight planning.</span>
+      <button class="iconbtn" id="theme" title="Switch light / dark" aria-label="Switch light or dark theme">◐</button>
+    </div>
+    <nav role="tablist" aria-label="Sections">
+      <button role="tab" aria-selected="true" data-tab="fwd">Consultation</button>
+      <button role="tab" aria-selected="false" data-tab="bwd">Ask one question</button>
+      <button role="tab" aria-selected="false" data-tab="rules">Rules</button>
+      <button role="tab" aria-selected="false" data-tab="tests">Tests</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="tab-fwd"></section>
+  <section id="tab-bwd" hidden></section>
+  <section id="tab-rules" hidden></section>
+  <section id="tab-tests" hidden></section>
+</main>
+<footer>Every rule comes from a paragraph of 14 CFR Part 91. Engine: forward and backward chaining in SWI-Prolog.</footer>
+
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, "");
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null) e.append(k.nodeType ? k : document.createTextNode(k));
+  return e;
+}
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  if (!res.ok) throw new Error("The server answered " + res.status);
+  return res.json();
+}
+const PHASES = [["base", "Conditions"], ["svfr", "Special VFR"], ["ifr", "IFR destination"], ["alt", "Alternate"], ["fuel", "Fuel"]];
+const PLANE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.6 7.4L22 12.6v1.8l-8.4-1.3L13 18l2.4 1.7V22L12 21l-3.4 1v-2.3L11 18l-.6-4.9L2 14.4v-1.8l8.4-3.2z"/></svg>';
+const STOP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 7l10 10"/></svg>';
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>';
+
+/* ---------- theme ---------- */
+(function () {
+  let saved = null;
+  try { saved = localStorage.getItem("aerorule-theme"); } catch (e) {}
+  if (saved) document.documentElement.dataset.theme = saved;
+  $("#theme").addEventListener("click", () => {
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("aerorule-theme", next); } catch (e) {}
+  });
+})();
+
+/* ---------- tabs ---------- */
+const loaded = {};
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
+  for (const t of ["fwd", "bwd", "rules", "tests"]) $("#tab-" + t).hidden = t !== b.dataset.tab;
+  if (b.dataset.tab === "rules" && !loaded.rules) { loaded.rules = true; renderRules(); }
+  if (b.dataset.tab === "tests" && !loaded.tests) { loaded.tests = true; renderTests(); }
+}));
+
+/* ---------- the question wizard (used for both modes) ---------- */
+const PRESETS = [
+  { label: "Class D, poor weather, Special VFR clearance", hint: "expected: legal", answers: {
+      flight_rules: "vfr", airspace_class: "d", altitude_msl_ft: "3000", night: "no", in_surface_area: "yes",
+      takeoff_landing: "yes", flight_visibility_sm: "2", ceiling_ft: "800", ground_visibility_reported: "yes",
+      ground_visibility_sm: "1.5", in_clouds: "no", dist_below_cloud_ft: "none", dist_above_cloud_ft: "none",
+      dist_horizontal_cloud_ft: "none", between_sunrise_sunset: "yes", airport_svfr_prohibited: "no",
+      atc_svfr_clearance: "yes", fuel_to_dest_min: "90", fuel_onboard_min: "150" } },
+  { label: "Same flight, but no ATC clearance", hint: "expected: not legal", answers: null, from: 0, override: { atc_svfr_clearance: "no" } },
+  { label: "IFR, low destination weather, precision alternate", hint: "expected: legal", answers: {
+      flight_rules: "ifr", dest_has_std_iap: "yes", dest_fcst_ceiling_ft: "1500", dest_fcst_vis_sm: "2",
+      alt_iap_type: "precision", alt_published: "no", alt_fcst_ceiling_ft: "700", alt_fcst_vis_sm: "3",
+      fuel_dest_to_alt_min: "30", fuel_to_dest_min: "100", fuel_onboard_min: "175" } },
+];
+PRESETS[1].answers = { ...PRESETS[0].answers, ...PRESETS[1].override };
+
+const GOALS = [
+  [1, "Is this flight legal to depart?", "The full question. Works back through every rule."],
+  [2, "Is an alternate airport required?", "IFR only. Uses the 1-2-3 test."],
+  [3, "Can Special VFR be authorised?", "Poor weather in a surface area."],
+  [4, "What are the VFR weather minimums here?", "The table in 14 CFR 91.155(a)."],
+  [5, "How many minutes of fuel are required?", "VFR day / night, or IFR with alternate."],
+];
+
+function makeWizard(root, mode) {
+  const st = { answers: [], q: null, note: "", result: null, goal: null, busy: false, error: "", presetRun: null };
+
+  async function ask() {
+    st.busy = true; render();
+    try {
+      const body = { answers: st.answers.map(a => ({ name: a.name, value: a.value })) };
+      let path = "/api/forward";
+      if (mode === "bwd") { path = "/api/backward"; body.goal = st.goal; }
+      const r = await api(path, body);
+      if (r.status === "error") { st.error = r.message; st.answers = st.answers.filter(a => a.name !== r.name); st.presetRun = null; st.busy = false; return ask(); }
+      if (r.status === "question") {
+        st.q = r.question; st.note = r.note || ""; st.result = null;
+        if (r.goal) st.goalText = r.goal;
+        const pre = st.presetRun;
+        if (pre && Object.prototype.hasOwnProperty.call(pre, st.q.name)) {
+          st.answers.push({ name: st.q.name, value: pre[st.q.name], prompt: st.q.prompt });
+          st.busy = false; return ask();
+        }
+        st.presetRun = null;
+      } else { st.result = r; st.q = null; st.presetRun = null; }
+    } catch (e) { st.error = e.message + ". Is the server still running?"; st.presetRun = null; }
+    st.busy = false; render();
+  }
+  function answer(value) {
+    st.error = "";
+    st.answers.push({ name: st.q.name, value: String(value), prompt: st.q.prompt });
+    ask();
+  }
+  function back() {
+    if (!st.answers.length) return;
+    st.answers.pop(); st.error = ""; st.result = null; ask();
+  }
+  function reset() { st.answers = []; st.q = null; st.result = null; st.error = ""; st.goal = null; st.presetRun = null; if (mode === "fwd") ask(); else render(); }
+  function preset(p) { st.answers = []; st.result = null; st.error = ""; st.presetRun = p.answers; if (mode === "bwd" && !st.goal) st.goal = 1; ask(); }
+
+  function questionCard() {
+    const q = st.q;
+    const card = el("div", { class: "card" });
+    if (mode === "fwd") {
+      const idx = PHASES.findIndex(p => p[0] === q.group);
+      card.append(el("ol", { class: "steps" }, PHASES.map((p, i) => el("li", { class: i === idx ? "on" : i < idx ? "done" : "" }, p[1]))));
+    } else {
+      card.append(el("p", { class: "muted small" }, "Goal: ", el("b", {}, st.goalText || "")));
+    }
+    if (st.note) card.append(el("p", { class: "note" }, st.note));
+    card.append(el("p", { class: "qtext", id: "qtext" }, q.prompt));
+    const t = q.type;
+    if (t.kind === "choice") {
+      card.append(el("div", { class: "opts", role: "group", "aria-labelledby": "qtext" },
+        t.options.map(o => el("button", { class: "opt", onclick: () => answer(o) }, o))));
+    } else {
+      const inp = el("input", { type: "number", step: "any", min: t.min, max: t.max, id: "num", "aria-labelledby": "qtext", inputmode: "decimal" });
+      const err = el("div", { class: "err", role: "alert" });
+      const go = () => {
+        const v = inp.value.trim(), n = Number(v);
+        if (v === "" || Number.isNaN(n)) { err.textContent = "Please type a number."; return; }
+        if (n < t.min || n > t.max) { err.textContent = "Please give a value from " + t.min + " to " + t.max + "."; return; }
+        answer(v);
+      };
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+      card.append(el("div", { class: "numrow" }, inp, el("button", { class: "btn", onclick: go }, "Next"),
+        t.none ? el("button", { class: "btn ghost", onclick: () => answer("none") }, "None") : null), err,
+        el("div", { class: "hint" }, "Allowed range: " + t.min + " to " + t.max + (t.none ? ". Choose None if there is nothing to report." : ".")));
+      setTimeout(() => inp.focus(), 0);
+    }
+    card.append(el("details", { class: "why" }, el("summary", {}, "Why do you ask?"),
+      el("p", {}, q.why),
+      el("div", { class: "small muted" }, "Rules that use this answer:"),
+      el("div", { class: "rulechips" }, q.rules.map(r => el("span", { class: "rc" }, r)))));
+    card.append(el("div", { class: "actions" },
+      el("button", { class: "btn plain", onclick: back, disabled: !st.answers.length }, "← Back"),
+      el("button", { class: "btn plain", onclick: reset }, "Start over")));
+    return card;
+  }
+
+  function sidePanel() {
+    const side = el("aside", { class: "card side" }, el("h3", {}, "Your answers"));
+    if (!st.answers.length) side.append(el("p", { class: "muted small" }, "Nothing yet."));
+    else side.append(el("ul", { class: "answers" }, st.answers.map(a => el("li", {}, el("span", {}, shortPrompt(a.prompt)), el("b", {}, a.value)))));
+    side.append(el("h3", { style: "margin-top:18px" }, "Try an example"),
+      el("div", { class: "presets" }, PRESETS.map(p => el("button", { class: "btn plain small", onclick: () => preset(p) },
+        p.label, el("br"), el("span", { class: "muted" }, p.hint)))));
+    return side;
+  }
+  const shortPrompt = p => p.length > 46 ? p.slice(0, 44) + "…" : p;
+
+  function resultCard() {
+    const r = st.result, box = el("div", { class: "card" });
+    if (mode === "fwd") {
+      const ok = r.verdict === "legal";
+      const v = el("div", { class: "verdict " + r.verdict });
+      v.innerHTML = ok ? CHECK : STOP;
+      v.append(el("div", {}, el("div", { class: "big" }, ok ? "Legal to depart" : "Not legal to depart"),
+        el("div", { class: "sub" }, ok ? "under the rules modelled here" : "at least one rule is not met")));
+      box.append(v);
+      if (!ok && r.problems.length) {
+        box.append(el("h3", {}, "Why not"));
+        const ul = el("ul", { class: "issues" });
+        let last = null;
+        for (const line of r.problems) {
+          if (/^\s{4,}/.test(line) && last) { last.pre.textContent += (last.pre.textContent ? "\n" : "") + line.trim(); continue; }
+          const pre = el("pre", { class: "detail" });
+          const li = el("li", {}, line.replace(/^\s*-\s*/, ""), pre);
+          ul.append(li); last = { li, pre };
+        }
+        ul.querySelectorAll("pre").forEach(p => { if (!p.textContent) p.remove(); });
+        box.append(ul);
+      }
+      box.append(el("h3", {}, "Rules fired, in order"),
+        el("ol", { class: "timeline" }, r.fired.map(f => el("li", {},
+          el("span", { class: "rid" }, f.id), " ", f.name, el("br"),
+          el("span", { class: "concl" }, f.conclusion), el("span", { class: "src" }, f.source)))),
+        el("h3", {}, "How the conclusion was reached"), treeView(r.tree));
+    } else {
+      const ok = r.proved;
+      const v = el("div", { class: "verdict " + (ok ? "legal" : "not_legal") });
+      v.innerHTML = ok ? CHECK : STOP;
+      v.append(el("div", {}, el("div", { class: "sub" }, r.goal), el("div", { class: "big" }, ok ? r.answer : "Not proved"),
+        ok ? null : el("div", { class: "sub" }, r.answer)));
+      box.append(v);
+      if (ok) box.append(el("h3", {}, "Proof (each line is proved by the lines under it)"), treeView([r.proof]));
+      else box.append(el("p", { class: "muted small" }, "Use the Consultation tab for a full report that shows which rule failed."));
+    }
+    box.append(el("div", { class: "actions" },
+      el("button", { class: "btn plain", onclick: back }, "← Change the last answer"),
+      el("button", { class: "btn", onclick: reset }, mode === "fwd" ? "New consultation" : "Ask another question")));
+    return box;
+  }
+
+  function treeView(nodes) {
+    const build = n => {
+      const li = el("li", {});
+      const tags = { rule: "rule", given: "answer", check: "check", absent: "none", ref: "see above" };
+      li.append(el("span", { class: "tag " + n.kind }, tags[n.kind] || n.kind), el("span", { class: "t" }, n.text));
+      if (n.kind === "rule") li.append(el("span", { class: "why" }, n.rule + " · " + n.name + " · " + n.source));
+      if (n.children && n.children.length) li.append(el("ul", {}, n.children.map(build)));
+      return li;
+    };
+    return el("div", { class: "tree" }, el("ul", {}, nodes.map(build)));
+  }
+
+  function goalPicker() {
+    return el("div", { class: "card" }, el("h2", {}, "Ask one question"),
+      el("p", { class: "muted" }, "Backward chaining: pick a goal and the engine works back from it. It only asks for the facts that goal needs."),
+      el("div", { class: "goals" }, GOALS.map(([n, t, d]) => el("button", { class: "goal", onclick: () => { st.goal = n; st.answers = []; ask(); } }, el("b", {}, t), el("span", {}, d)))));
+  }
+
+  function render() {
+    root.replaceChildren();
+    if (mode === "bwd" && !st.goal) { root.append(el("div", { class: "grid" }, goalPicker(), sidePanelPresetsOnly())); return; }
+    let main;
+    if (st.busy && !st.q && !st.result) main = el("div", { class: "card" }, el("span", { class: "spin" }), "Thinking…");
+    else if (st.result) main = resultCard();
+    else if (st.q) main = questionCard();
+    else main = el("div", { class: "card" }, el("span", { class: "spin" }), "Loading…");
+    if (st.error) main.prepend(el("div", { class: "err", role: "alert" }, st.error));
+    root.append(el("div", { class: "grid" }, main, sidePanel()));
+    const f = $(".opt, #num", root);
+    if (f && !st.busy) f.focus({ preventScroll: true });
+  }
+  function sidePanelPresetsOnly() { st.answers = []; return sidePanel(); }
+
+  render();
+  if (mode === "fwd") ask();
+}
+makeWizard($("#tab-fwd"), "fwd");
+makeWizard($("#tab-bwd"), "bwd");
+
+/* ---------- rules ---------- */
+async function renderRules() {
+  const root = $("#tab-rules");
+  root.append(el("div", { class: "card" }, el("span", { class: "spin" }), "Loading the rules…"));
+  try {
+    const data = await api("/api/rules");
+    root.replaceChildren();
+    const list = el("div", {});
+    const items = data.rules.map(r => {
+      const d = el("details", { class: "rule" },
+        el("summary", {}, el("span", { class: "rid" }, r.id), el("span", {}, el("b", {}, r.name), el("br"), el("span", { class: "muted small" }, r.source))),
+        el("div", { class: "body" }, r.variants.map((v, i) => el("div", {},
+          r.variants.length > 1 ? el("div", { class: "muted small" }, "Version " + (i + 1)) : null,
+          el("div", { class: "kw" }, "IF"), el("ul", {}, v["if"].map(c => el("li", {}, c))),
+          el("div", { class: "kw" }, "THEN"), el("ul", {}, el("li", {}, v.then))))));
+      d.dataset.text = (r.id + " " + r.name + " " + r.source).toLowerCase();
+      list.append(d); return d;
+    });
+    const count = el("span", { class: "muted small" }, data.rules.length + " rules");
+    const search = el("input", { class: "search", type: "search", placeholder: "Search by rule, name or paragraph (for example 91.169 or Class G)", "aria-label": "Search rules" });
+    search.addEventListener("input", () => {
+      const q = search.value.trim().toLowerCase(); let n = 0;
+      items.forEach(d => { const show = !q || d.dataset.text.includes(q); d.hidden = !show; if (show) n++; });
+      count.textContent = n + " of " + items.length + " rules";
+    });
+    root.append(el("div", { class: "card" }, el("h2", {}, "The rules"),
+      el("p", { class: "muted" }, "Each rule cites the regulation paragraph it comes from."), search, count, el("div", { style: "margin-top:8px" }, list)),
+      el("div", { class: "card", style: "margin-top:16px" }, el("h2", {}, "Sources"),
+        el("ul", { class: "regs" }, data.regulations.map(g => el("li", {}, el("b", {}, g.short), " ", g.title, " · ", el("a", { href: g.url, target: "_blank", rel: "noopener" }, "read it"))))));
+  } catch (e) { root.replaceChildren(el("div", { class: "card err" }, e.message)); }
+}
+
+/* ---------- tests ---------- */
+function renderTests() {
+  const root = $("#tab-tests");
+  const out = el("div", {});
+  const run = async () => {
+    out.replaceChildren(el("span", { class: "spin" }), "Running the tests…");
+    try {
+      const r = await api("/api/tests");
+      const lines = r.lines;
+      const sum = lines.find(l => /tests passed/.test(l)) || "";
+      const m = sum.match(/(\d+) of (\d+)/);
+      const cov = lines.find(l => /rules triggered/.test(l)) || "";
+      const all = m ? +m[2] : 0, pass = m ? +m[1] : 0;
+      const view = el("div", { class: "tests", tabindex: "0", role: "region", "aria-label": "Test output" });
+      for (const l of lines) {
+        if (!l.trim()) continue;
+        const cls = /^PASS/.test(l) ? "pass" : /^FAIL/.test(l) ? "fail" : /^=====/.test(l) ? "head" : /^\s/.test(l) ? "dim" : "";
+        view.append(el("div", { class: cls }, l));
+      }
+      out.replaceChildren(
+        el("div", { class: "verdict " + (pass === all && all ? "legal" : "not_legal") },
+          el("div", {}, el("div", { class: "big" }, pass + " of " + all + " tests passed"), el("div", { class: "sub" }, cov))),
+        el("div", { class: "bar", "aria-hidden": "true" }, el("i", { style: "width:" + (all ? 100 * pass / all : 0) + "%" })),
+        view);
+    } catch (e) { out.replaceChildren(el("div", { class: "err" }, e.message)); }
+  };
+  root.append(el("div", { class: "card" }, el("h2", {}, "Built-in tests"),
+    el("p", { class: "muted" }, "The same automatic tests as run_tests in the Prolog file: scenarios, the VFR minimum table, explanations, and forward against backward chaining."),
+    el("div", { class: "actions", style: "margin:0 0 14px" }, el("button", { class: "btn", onclick: run }, "Run the tests again")), out));
+  run();
+}
+</script>
+</body>
+</html>
